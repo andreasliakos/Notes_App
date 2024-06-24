@@ -1,14 +1,7 @@
-# serializers.py
-
 from rest_framework import serializers
 from .models import DefaultNoteType, ImageNoteType, CheckboxNoteType
 
 class DefaultNoteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DefaultNoteType
-        fields = '__all__'
-
-class CreateDefaultNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = DefaultNoteType
         fields = '__all__'
@@ -26,17 +19,25 @@ class DeleteDefaultNoteSerializer(serializers.ModelSerializer):
 class ImageNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageNoteType
-        fields = '__all__'
+        fields = ['id', 'title', 'note_type', 'description', 'image']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.image:
+            representation['image'] = instance.image.url
+        return representation
         
-class CreateImageNoteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ImageNoteType
-        fields = '__all__'
 
 class UpdateImageNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImageNoteType
-        fields = '__all__'
+        fields = ['id', 'title', 'note_type', 'description', 'image']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.image:
+            representation['image'] = instance.image.url
+        return representation
         
 class DeleteImageNoteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -44,11 +45,6 @@ class DeleteImageNoteSerializer(serializers.ModelSerializer):
         fields = []
 
 class CheckboxNoteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CheckboxNoteType
-        fields = '__all__'
-
-class CreateCheckboxNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CheckboxNoteType
         fields = '__all__'
@@ -62,3 +58,4 @@ class DeleteCheckboxNoteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CheckboxNoteType
         fields = []
+

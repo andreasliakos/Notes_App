@@ -7,6 +7,7 @@ const api = axios.create({
   }
 });
 
+
 export default {
   getNotes() {
     return api.get('/notes/all/');
@@ -21,7 +22,18 @@ export default {
   },
 
   createImageNote(note) {
-    return api.post('/notes/create/image/', note);
+    const formData = new FormData();
+    formData.append('id', note.id);
+    formData.append('title', note.title);
+    formData.append('description', note.description);
+    formData.append('note_type', note.note_type);
+    formData.append('image', note.image); 
+
+    return api.post('/notes/create/image/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data' 
+      }
+    });
   },
 
   createCheckboxNote(note) {
@@ -34,9 +46,20 @@ export default {
   },
 
   updateImageNote(note) {
-    const { id, ...data } = note;
-    return api.put(`/notes/update/image/${id}/`, data);
-  },
+  const { id, ...data } = note;
+  const formData = new FormData();
+  formData.append('id', id);
+  formData.append('title', data.title);
+  formData.append('description', data.description);
+  formData.append('note_type', data.note_type);
+  formData.append('image', data.image); 
+
+  return api.put(`/notes/update/image/${id}/`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+},
 
   updateCheckboxNote(note) {
     const { id, ...data } = note;

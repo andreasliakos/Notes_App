@@ -1,8 +1,8 @@
 from django.urls import path
 from .views import (
-    UnifiedNoteView, 
-    CreateDefaultNoteAPIView, 
-    CreateImageNoteAPIView, 
+    UnifiedNoteView,
+    CreateDefaultNoteAPIView,
+    CreateImageNoteAPIView,
     CreateCheckboxNoteAPIView,
     UpdateDefaultNoteAPIView,
     UpdateImageNoteAPIView,
@@ -10,10 +10,7 @@ from .views import (
     DeleteDefaultNoteAPIView,
     DeleteImageNoteAPIView,
     DeleteCheckboxNoteAPIView,
-    
 )
-from django.conf import settings
-from django.conf.urls.static import static
 
 urlpatterns = [
     path('notes/all/', UnifiedNoteView.as_view(), name='note-list'),
@@ -25,5 +22,7 @@ urlpatterns = [
     path('notes/update/checkbox/<int:pk>/', UpdateCheckboxNoteAPIView.as_view(), name='update-checkbox-note'),
     path('notes/delete/default/<int:pk>/', DeleteDefaultNoteAPIView.as_view(), name='delete-default-note'),
     path('notes/delete/image/<int:pk>/', DeleteImageNoteAPIView.as_view(), name='delete-image-note'),
-    path('notes/delete/checkbox/<int:pk>/', DeleteCheckboxNoteAPIView.as_view(), name='delete-checkbox-note'), 
+    path('notes/delete/checkbox/<int:pk>/', DeleteCheckboxNoteAPIView.as_view(), name='delete-checkbox-note'),
+    
 ]
+
