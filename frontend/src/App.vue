@@ -1,71 +1,85 @@
 <template>
-  <div id="app" class="container">
-    <!-- Header and Add button -->
-    <header class="header">
-      <h1>Note Taking App</h1>
-      <button class="add-note-button" @click="openAddModal">
-        <span>Add</span>
-      </button>
+  <div id="app" class="min-h-screen bg-gradient-to-br from-teal-400 to-purple-600 flex items-center justify-center font-roboto font-thin">
+    <header class="container text-center text-white">
+      <h1 class="header mb-8 flex justify-between items-center text-2xl font-bold">
+        Note Taking App
+        <button class="add-note-button bg-blue-600 text-white px-6 py-2 rounded transition duration-300 ease-in-out hover:bg-blue-700" @click="openAddModal">
+          <span>Add</span>
+        </button>
+      </h1>
     </header>
 
-    <!-- Note table -->
     <div class="content">
-      <table class="notes-table">
+      <router-view></router-view>
+    </div>
+
+    <div class="content">
+      <table class="notes-table w-800 border-collapse overflow-hidden shadow-md">
         <thead>
-          <tr>
-            <th>ID</th>
-            <th>Title</th>
-            <th>Description</th>
-            <th>Note Type</th>
+          <tr class="bg-blue-700">
+            <th class="p-4 text-left text-white">ID</th>
+            <th class="p-4 text-left text-white">Title</th>
+            <th class="p-4 text-left text-white">Description</th>
+            <th class="p-4 text-left text-white">Note Type</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="note in notes" :key="note.id" @click="openNoteModal(note)">
-            <td class="note-id">{{ note.id }}</td>
-            <td>{{ note.title }}</td>
-            <td>{{ note.description }}</td>
-            <td>{{ getNoteTypeName(note.note_type) }}</td>
+          <tr v-for="note in notes" :key="note.id" @click="openNoteModal(note)" class="transition duration-300 ease-in-out hover:bg-opacity-30 cursor-pointer">
+            <td class="p-4">{{ note.id }}</td>
+            <td class="p-4">{{ note.title }}</td>
+            <td class="p-4">{{ note.description }}</td>
+            <td class="p-4">{{ getNoteTypeName(note.note_type) }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Modal for Note Details -->
-    <div class="modal" v-if="selectedNote !== null">
-      <div class="modal-content">
-        <span class="close" @click="closeNoteModal">&times;</span>
-        <h2>Note Details</h2>
+    <div class="modal fixed left-0 top-0 w-full h-full backdrop-filter backdrop-blur bg-black bg-opacity-70" v-if="selectedNote !== null">
+      <div class="modal-content bg-opacity-20 rounded-lg p-8 w-4/5 max-w-2xl shadow-lg text-white">
+        <span class="close absolute top-5 right-5 text-gray-300 text-2xl font-bold cursor-pointer" @click="closeNoteModal">&times;</span>
+        <h2 class="text-2xl font-bold mb-4">Note Details</h2>
         <div class="note-detail">
           <div><strong>ID:</strong> {{ selectedNote.id }}</div>
           <div><strong>Title:</strong> {{ selectedNote.title }}</div>
           <div><strong>Description:</strong> {{ selectedNote.description }}</div>
           <div><strong>Note Type:</strong> {{ getNoteTypeName(selectedNote.note_type) }}</div>
+          <div v-if="selectedNote.note_type === 2">
+            <strong>Checkbox Tick:</strong>
+            <span v-if="selectedNote.checkbox_tick"> Checked</span>
+            <span v-else> Unchecked</span>
+          </div>
+          <div v-if="selectedNote.note_type === 1">
+            <strong>Image:</strong>
+            <div class="image-container">
+              <img :src="getImageUrl(selectedNote.image)" class="note-image max-w-50 h-auto rounded-lg block transition-opacity duration-300 ease-in-out opacity-100 mx-auto my-0" v-if="selectedNote.imageVisible">
+              <button class="button small bg-blue-600 text-white px-2 py-1 rounded-lg text-xs transition duration-300 ease-in-out hover:opacity-90" @click="toggleImageVisibility(selectedNote)">
+                {{ selectedNote.imageVisible ? 'Hide Image' : 'Show Image' }}
+              </button>
+            </div>
+          </div>
         </div>
-        <!-- Buttons section -->
-        <div class="button-group">
-          <button class="button primary" @click="openEditModal">Edit</button>
-          <button class="button danger" @click="openDeleteModal">Delete</button>
+        <div class="button-group flex justify-center mt-6 gap-4">
+          <button class="button primary bg-blue-600 text-white rounded-lg px-6 py-3 transition duration-300 ease-in-out hover:bg-blue-700" @click="openEditModal">Edit</button>
+          <button class="button danger bg-red-600 text-white rounded-lg px-6 py-3 transition duration-300 ease-in-out hover:bg-red-700" @click="openDeleteModal">Delete</button>
         </div>
       </div>
     </div>
 
-    <!-- AddModal component -->
     <AddModal v-if="isAdding" @save="saveNewNote" @cancel="cancelAdding" />
 
-    <!-- EditModal component -->
     <EditModal v-if="isEditing" :note="selectedNote" @save="saveEditedNote" @cancel="cancelEditing" />
 
-    <!-- DeleteConfirmationDialog component -->
     <DeleteConfirmationDialog v-if="isDeleting" @confirm="deleteNote" @cancel="cancelDeleting" />
 
-    <!-- Footer -->
-    <footer class="footer">
+    <footer class="footer text-center py-4 text-white border-t-2 border-gray-300 mt-6">
       <p>&copy; 2024 Note Taking App</p>
     </footer>
+
   </div>
 </template>
 
 <script>
+import { ref, onMounted } from 'vue';
 import AddModal from './components/AddModal.vue';
 import EditModal from './components/EditModal.vue';
 import DeleteConfirmationDialog from './components/DeleteConfirmationDialog.vue';
@@ -76,28 +90,27 @@ export default {
   components: {
     AddModal,
     EditModal,
-    DeleteConfirmationDialog
+    DeleteConfirmationDialog,
   },
-  data() {
-    return {
-      notes: [],
-      isAdding: false,
-      isEditing: false,
-      isDeleting: false,
-      selectedNote: null
-    };
-  },
-  methods: {
-    fetchNotes() {
+  setup() {
+    const notes = ref([]);
+    const isAdding = ref(false);
+    const isEditing = ref(false);
+    const isDeleting = ref(false);
+    const selectedNote = ref(null);
+    const baseUrl = 'http://127.0.0.1:8000';
+
+    const fetchNotes = () => {
       api.getNotes()
         .then(response => {
-          this.notes = response.data;
+          notes.value = response.data;
         })
         .catch(error => {
           console.error('Error fetching notes:', error);
         });
-    },
-    getNoteTypeName(noteType) {
+    };
+
+    const getNoteTypeName = (noteType) => {
       switch (noteType) {
         case 0:
           return 'Default';
@@ -108,352 +121,233 @@ export default {
         default:
           return 'Default';
       }
-    },
-    openAddModal() {
-      this.isAdding = true;
-    },
-    saveNewNote(newNote) {
+    };
+
+    const openAddModal = () => {
+      isAdding.value = true;
+    };
+
+    const saveNewNote = (newNote) => {
       switch (newNote.note_type) {
         case 0:
           api.createDefaultNote(newNote)
             .then(response => {
-              this.notes.push(response.data);
+              notes.value.push(response.data);
             })
             .catch(error => {
               console.error('Error saving note:', error);
             })
             .finally(() => {
-              this.isAdding = false;
+              isAdding.value = false;
             });
           break;
         case 1:
           api.createImageNote(newNote)
             .then(response => {
-              this.notes.push(response.data);
+              notes.value.push(response.data);
             })
             .catch(error => {
               console.error('Error saving note:', error);
             })
             .finally(() => {
-              this.isAdding = false;
+              isAdding.value = false;
             });
           break;
         case 2:
           api.createCheckboxNote(newNote)
             .then(response => {
-              this.notes.push(response.data);
+              notes.value.push(response.data);
             })
             .catch(error => {
               console.error('Error saving note:', error);
             })
             .finally(() => {
-              this.isAdding = false;
+              isAdding.value = false;
             });
           break;
         default:
           console.error('Invalid note type:', newNote.note_type);
-          this.isAdding = false;
+          isAdding.value = false;
           break;
       }
-    },
-    cancelAdding() {
-      this.isAdding = false;
-    },
-    openNoteModal(note) {
-      this.selectedNote = note;
-    },
-    closeNoteModal() {
-      this.selectedNote = null;
-    },
-    openEditModal() {
-      this.isEditing = true;
-    },
-    saveEditedNote(editedNote) {
+    };
+
+    const cancelAdding = () => {
+      isAdding.value = false;
+    };
+
+    const openNoteModal = (note) => {
+      selectedNote.value = note;
+    };
+
+    const closeNoteModal = () => {
+      selectedNote.value = null;
+    };
+
+    const openEditModal = () => {
+      isEditing.value = true;
+    };
+
+    const saveEditedNote = (editedNote) => {
       switch (editedNote.note_type) {
         case 0:
           api.updateDefaultNote(editedNote)
-            .then(response => {
-              const index = this.notes.findIndex(note => note.id === editedNote.id);
-              this.notes.splice(index, 1, response.data);
+            .then(() => {
+              const index = notes.value.findIndex(note => note.id === editedNote.id);
+              if (index !== -1) {
+                notes.value.splice(index, 1, editedNote);
+              }
             })
             .catch(error => {
               console.error('Error updating note:', error);
             })
             .finally(() => {
-              this.isEditing = false;
-              this.selectedNote = null;
+              isEditing.value = false;
+              selectedNote.value = null;
             });
           break;
         case 1:
           api.updateImageNote(editedNote)
-            .then(response => {
-              const index = this.notes.findIndex(note => note.id === editedNote.id);
-              this.notes.splice(index, 1, response.data);
+            .then(() => {
+              const index = notes.value.findIndex(note => note.id === editedNote.id);
+              if (index !== -1) {
+                notes.value.splice(index, 1, editedNote);
+              }
             })
             .catch(error => {
               console.error('Error updating note:', error);
             })
             .finally(() => {
-              this.isEditing = false;
-              this.selectedNote = null;
+              isEditing.value = false;
+              selectedNote.value = null;
             });
           break;
         case 2:
           api.updateCheckboxNote(editedNote)
-            .then(response => {
-              const index = this.notes.findIndex(note => note.id === editedNote.id);
-              this.notes.splice(index, 1, response.data);
+            .then(() => {
+              const index = notes.value.findIndex(note => note.id === editedNote.id);
+              if (index !== -1) {
+                notes.value.splice(index, 1, editedNote);
+              }
             })
             .catch(error => {
               console.error('Error updating note:', error);
             })
             .finally(() => {
-              this.isEditing = false;
-              this.selectedNote = null;
+              isEditing.value = false;
+              selectedNote.value = null;
             });
           break;
         default:
           console.error('Invalid note type:', editedNote.note_type);
-          this.isEditing = false;
-          this.selectedNote = null;
+          isEditing.value = false;
+          selectedNote.value = null;
           break;
       }
-    },
-    cancelEditing() {
-      this.isEditing = false;
-      this.selectedNote = null;
-    },
-    openDeleteModal() {
-      this.isDeleting = true;
-    },
-    deleteNote() {
-      if (this.selectedNote) {
-        switch (this.selectedNote.note_type) {
+    };
+
+    const cancelEditing = () => {
+      isEditing.value = false;
+      selectedNote.value = null;
+    };
+
+    const openDeleteModal = () => {
+      isDeleting.value = true;
+    };
+
+    const deleteNote = () => {
+      if (selectedNote.value) {
+        switch (selectedNote.value.note_type) {
           case 0:
-            api.deleteDefaultNote(this.selectedNote.id)
+            api.deleteDefaultNote(selectedNote.value.id)
               .then(() => {
-                this.notes = this.notes.filter(note => note.id !== this.selectedNote.id);
+                notes.value = notes.value.filter(note => note.id !== selectedNote.value.id);
               })
               .catch(error => {
                 console.error('Error deleting note:', error);
               })
               .finally(() => {
-                this.isDeleting = false;
-                this.selectedNote = null;
+                isDeleting.value = false;
+                selectedNote.value = null;
               });
             break;
           case 1:
-            api.deleteImageNote(this.selectedNote.id)
+            api.deleteImageNote(selectedNote.value.id)
               .then(() => {
-                this.notes = this.notes.filter(note => note.id !== this.selectedNote.id);
+                notes.value = notes.value.filter(note => note.id !== selectedNote.value.id);
               })
               .catch(error => {
                 console.error('Error deleting note:', error);
               })
               .finally(() => {
-                this.isDeleting = false;
-                this.selectedNote = null;
+                isDeleting.value = false;
+                selectedNote.value = null;
               });
             break;
           case 2:
-            api.deleteCheckboxNote(this.selectedNote.id)
+            api.deleteCheckboxNote(selectedNote.value.id)
               .then(() => {
-                this.notes = this.notes.filter(note => note.id !== this.selectedNote.id);
+                notes.value = notes.value.filter(note => note.id !== selectedNote.value.id);
               })
               .catch(error => {
                 console.error('Error deleting note:', error);
               })
               .finally(() => {
-                this.isDeleting = false;
-                this.selectedNote = null;
+                isDeleting.value = false;
+                selectedNote.value = null;
               });
             break;
           default:
-            console.error('Invalid note type:', this.selectedNote.note_type);
-            this.isDeleting = false;
-            this.selectedNote = null;
+            console.error('Invalid note type:', selectedNote.value.note_type);
+            isDeleting.value = false;
+            selectedNote.value = null;
             break;
         }
       }
-    },
-    cancelDeleting() {
-      this.isDeleting = false;
-      this.selectedNote = null;
-    }
+    };
+
+    const cancelDeleting = () => {
+      isDeleting.value = false;
+      selectedNote.value = null;
+    };
+
+    const toggleImageVisibility = (note) => {
+      note.imageVisible = !note.imageVisible;
+    };
+
+    const getImageUrl = (image) => {
+      return image ? `${baseUrl}${image}` : '';
+    };
+
+    onMounted(fetchNotes);
+
+    return {
+      notes,
+      isAdding,
+      isEditing,
+      isDeleting,
+      selectedNote,
+      baseUrl,
+      fetchNotes,
+      getNoteTypeName,
+      openAddModal,
+      saveNewNote,
+      cancelAdding,
+      openNoteModal,
+      closeNoteModal,
+      openEditModal,
+      saveEditedNote,
+      cancelEditing,
+      openDeleteModal,
+      deleteNote,
+      cancelDeleting,
+      toggleImageVisibility,
+      getImageUrl,
+    };
   },
-  created() {
-    this.fetchNotes();
-  }
 };
 </script>
 
 <style>
-html,
-body {
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  background: linear-gradient(45deg, #49a09d, #5f2c82);
-  font-family: 'Roboto', sans-serif;
-  font-weight: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.container {
-  text-align: center;
-  color: #fff;
-}
-
-.header {
-  margin-bottom: 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header h1 {
-  font-size: 28px;
-  color: #fff;
-  margin: 0;
-}
-
-.add-note-button {
-  background: #55608f;
-  color: #ffffff;
-  border: none;
-  padding: 12px 30px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background 0.3s ease;
-}
-
-.add-note-button:hover {
-  background: #55608f;
-}
-
-.notes-table {
-  width: 800px;
-  border-collapse: collapse;
-  overflow: hidden;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-}
-
-.notes-table th,
-.notes-table td {
-  padding: 15px;
-  background-color: rgba(255, 255, 255, 0.2);
-  color: #fff;
-}
-
-.notes-table th {
-  text-align: left;
-}
-
-.notes-table thead th {
-  background-color: #55608f;
-}
-
-.notes-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-.notes-table tbody td {
-  position: relative;
-}
-
-
-.footer {
-  text-align: center;
-  padding: 15px;
-  color: #fff;
-  border-top: 2px solid #ddd;
-  margin-top: 30px;
-}
-
-.modal {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  background-color: rgba(0, 0, 0, 0.7);
-}
-
-.modal-content {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 30px;
-  width: 80%;
-  max-width: 600px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  position: relative;
-  text-align: left;
-  color: #fff;
-}
-
-.close {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  color: #aaa;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.close:hover,
-.close:focus {
-  color: #fff;
-}
-
-.note-detail {
-  text-align: left;
-  margin-bottom: 30px;
-}
-
-.note-detail div {
-  margin-bottom: 12px;
-}
-
-.button-group {
-  display: flex;
-  justify-content: center;
-  margin-top: 25px;
-  gap: 10px;
-}
-
-.button {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 24px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
-}
-
-.button.primary {
-  background-color: #55608f;
-  color: white;
-}
-
-.button.danger {
-  background-color: #cf2114;
-  color: white;
-}
-
-.button:hover {
-  opacity: 0.9;
-}
+@import './assets/styles/app.css';
 </style>
-
